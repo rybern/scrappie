@@ -1,0 +1,69 @@
+justificiation:
+  https://github.com/nanopore-wgs-consortium/NA12878/blob/master/Genome.md
+
+
+src/decode.h:
+ float map_to_sequence_viterbi(const_scrappie_matrix logpost, float stay_pen, float skip_pen,
+                               float local_pen, int const *seq, size_t seqlen, int * path);
+
+I think we're looking for logpost.
+
+logpost is assigned in src/scrappie_seqmappy.c
+
+src/networks.c:242:
+ scrappie_matrix nanonet_rgrgr_r94_posterior(const raw_table signal, float min_prob,
+                                             float tempW, float tempb, bool return_log) {
+post is taken with neural net.
+
+Unclear whether the signal is mixed. It looks to me like it is, but they're also using viterbi to get the output signal.
+May be a problem with chemistry version, they appear to only support r94, r941, r10. There do appear to be data with r9.4 per here: https://github.com/nanopore-wgs-consortium/NA12878/blob/master/Genome.md
+
+Looks like we're green to launch if we can build this thing, which I think we can.
+
+
+POSTERIOR EMISSION
+seq_mappy seems to do the following:
+	Find 'posteriors' from a fast5 file
+	Find a viterbi path through the posteriors, considering a .fasta file as reference it shouldn't deviate from
+		Maybe this can be useful instead of SMoL, if we can't easily use soft assignment
+
+For SMoL integration, just use seq_mappy and spit out the posterior, OR, add an additional main to the CLI
+
+What is the kmer or in logpost?
+  base_lookup[4] = { 'A', 'C', 'G', 'T' };
+
+encoding kmers to integers with bit arithmetic:
+  https://github.com/nanoporetech/scrappie/blob/248567d1506e3293abea383d781e9809e9b715d6/src/scrappie_seq_helpers.c
+
+encode_bases_to_integers:
+	kmers encoded as a base 4 integer, with earlier bases more significant. So, AAAA, AAAC, AAAG, ... TTTC, TTTG, TTTT
+	same order as is already in smol-minion, same as NanoNet
+
+	Probably the logpost is encoded in this way, but I haven't confirmed that.
+	This is how the states are encoded in the parameters to map_to_sequence_viterbi
+
+From map_to_sequence_viterbi I can confirm that logpost encoding works like encode_bases_to_integers and is row-major,
+so indexing goes like logpost->data.f[blk * logpost->stride + seq[i]];
+
+However, there appears to be a special value called STAY. Why would they encode STAY?
+
+The term 'block', as in nblock or blk, is used as 'event'. logpost is nKmers(+1?) X nEvents matrix.
+
+logpost->data.f[eventIx * logpost->stride + kmerIx], where kmerIx is 0..1023
+
+
+
+TRAINING
+
+We can train the model using https://github.com/rrwick/Basecalling-comparison/issues/1#issue-257656605
+Looks really hard
+
+
+
+COMPILING NOTES
+
+added -msse3 compiler flag per here:
+	https://github.com/jgaeddert/liquid-dsp/issues/80
+	https://github.com/jgaeddert/liquid-dsp/pull/65/commits/8e4ae07f6a6be0deab147d0d999f7f6ca382b314
+
+added flags to use appropriate versions of hdf5, openblas

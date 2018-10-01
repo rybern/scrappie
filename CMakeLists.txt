@@ -45,19 +45,41 @@ configure_file (
     "${PROJECT_BINARY_DIR}/include/version.h"
 )
 
+set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3")
+message("$ENV{OPENBLAS_ROOT}")
+set(BLAS_DIR $ENV{OPENBLAS_ROOT})
+set(BLAS_VENDORS OpenBLAS)
+set(HDF5 hdf5)
+set(BLAS "openblas")
+
+if (CBLAS_FOUND)
+	message("Blas found!")
+endif ()
 
 ##
 #   Set up include directories
 ##
 include_directories ("${PROJECT_BINARY_DIR}/include")
 if (OPENBLAS_ROOT)
+	message("OB")
+	message("${OPENBLAS_ROOT}")
+	message("OB")
 	include_directories ("${OPENBLAS_ROOT}/include")
 	link_directories ("${OPENBLAS_ROOT}/lib")
 	set (BLAS "openblas")
 else ()
-	set (BLAS "blas")
+	message("B")
+	#set (BLAS "blas")
+	include_directories ("$ENV{OPENBLAS_ROOT}/include")
+	link_directories ("$ENV{OPENBLAS_ROOT}/lib")
+
 endif ()
+
+include_directories ("$ENV{HDF5_ROOT}/include")
+link_directories ("$ENV{HDF5_ROOT}/lib")
+
 if (HDF5_ROOT)
+	message("HDF5")
 	include_directories ("${HDF5_ROOT}/include")
 	link_directories ("${HDF5_ROOT}/lib")
 	set (CMAKE_REQUIRED_INCLUDES ${HDF5_ROOT}/include)
