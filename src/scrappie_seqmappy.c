@@ -201,6 +201,23 @@ int main_seqmappy(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
+    // Dump logpost to a .csv file
+    // logpost->data.f[eventIx * logpost->stride + kmerIx]
+    FILE* file = fopen("scrappie_posterior.csv", "w");
+    int nEvents = nstate;
+    int nKmers = 1024; // state_len 5
+    for (int eventIx = 0; eventIx < nEvents; eventIx ++) {
+      for (int kmerIx = 0; kmerIx < nKmers; kmerIx ++) {
+        float val = logpost->data.f[eventIx * logpost->stride + kmerIx];
+        //fprintf(file, "event %d, kmer %d: %f\n", eventIx, kmerIx, val);
+        fprintf(file, "%f", val);
+        if(kmerIx < nKmers-1)
+          fprintf(file, ",");
+      }
+      fprintf(file, "\n");
+    }
+    fclose(file);
+
     const size_t nblock = logpost->nc;
     int * path = calloc(nblock, sizeof(int));
     if(NULL != path){
